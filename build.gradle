@@ -1,5 +1,6 @@
 plugins {
     id 'fabric-loom' version '1.6-SNAPSHOT'
+    id 'com.github.johnrengelman.shadow' version '8.1.1'
     id 'java'
 }
 
@@ -8,6 +9,11 @@ group = project.maven_group
 
 base {
     archivesName = project.archives_base_name
+}
+
+configurations {
+    shade
+    implementation.extendsFrom shade
 }
 
 repositories {
@@ -19,6 +25,10 @@ dependencies {
     mappings "net.fabricmc:yarn:${project.yarn_mappings}:v2"
     modImplementation "net.fabricmc:fabric-loader:${project.loader_version}"
     modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
+
+    shade("net.dv8tion:JDA:${project.jda_version}") {
+        exclude module: 'opus-java'
+    }
 }
 
 processResources {
@@ -29,6 +39,16 @@ processResources {
     }
 }
 
+shadowJar {
+    configurations = [project.configurations.shade]
+    archiveClassifier.set('dev-all')
+}
+
+remapJar {
+    inputFile.set(shadowJar.archiveFile)
+    dependsOn shadowJar
+}
+
 tasks.withType(JavaCompile).configureEach {
     it.options.release = 17
 }
@@ -36,11 +56,4 @@ tasks.withType(JavaCompile).configureEach {
 java {
     sourceCompatibility = JavaVersion.VERSION_17
     targetCompatibility = JavaVersion.VERSION_17
-    withSourcesJar()
-}
-
-jar {
-    from('LICENSE') {
-        rename { "${it}_${project.base.archivesName.get()}" }
-    }
 }
